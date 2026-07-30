@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Cleaner Workbench</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+    }
+
+    .app-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 720px;
+      padding: 32px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+
+    .header {
+      border-bottom: 1px solid #334155;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+
+    .header h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #38bdf8;
+      letter-spacing: -0.02em;
+    }
+
+    .header p {
+      color: #94a3b8;
+      font-size: 0.875rem;
+      margin-top: 4px;
+    }
+
+    .section-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    textarea {
+      width: 100%;
+      height: 140px;
+      background-color: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #f1f5f9;
+      padding: 12px 14px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus {
+      border-color: #38bdf8;
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 12px;
+      background-color: #0284c7;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 16px 0 24px 0;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+
+    .btn-submit:hover {
+      background-color: #0369a1;
+    }
+
+    .btn-submit:active {
+      transform: scale(0.99);
+    }
+
+    .summary-box {
+      background-color: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 16px;
+      min-height: 120px;
+      max-height: 250px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: #a7f3d0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .status-text {
+      font-size: 0.85rem;
+      margin-top: 8px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-card">
+    <div class="header">
+      <h2>✨ Data Fixing Studio</h2>
+      <p>Send raw, unstructured content to n8n and inspect the clean output below.</p>
+    </div>
+
+    <!-- Input Section -->
+    <label class="section-label" for="messyData">Raw Messy Data</label>
+    <textarea id="messyData" placeholder="Paste unorganized text, invoices, or messy lists here..."></textarea>
+    
+    <button class="btn-submit" onclick="sendData()">Process Data</button>
+
+    <!-- Summary / Output Section -->
+    <label class="section-label">Processed Summary / Clean Data</label>
+    <div id="summaryBox" class="summary-box">Awaiting input...</div>
+    <div id="status" class="status-text"></div>
+  </div>
+
+  <script>
+    const WEBHOOK_URL = "https://YOUR_N8N_INSTANCE_URL/webhook/YOUR_WEBHOOK_PATH";
+
+    async function sendData() {
+      const input = document.getElementById('messyData');
+      const summary = document.getElementById('summaryBox');
+      const status = document.getElementById('status');
+
+      if (!input.value.trim()) {
+        status.textContent = 'Please paste some data to process.';
+        status.style.color = '#f87171';
+        return;
+      }
+
+      status.textContent = 'Sending to n8n...';
+      status.style.color = '#38bdf8';
+      summary.textContent = 'Processing...';
+      summary.style.color = '#94a3b8';
+
+      try {
+        const response = await fetch('http://localhost:5678/webhook-test/1195b6ee-8227-450b-9d70-5f417eb6b15a', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rawData: input.value, timestamp: new Date().toISOString() })
+        });
+
+        if (response.ok) {
+          const result = await response.json(); // Expecting JSON response back from n8n Respond to Webhook node
+          status.textContent = 'Data successfully structured!';
+          status.style.color = '#4ade80';
+          
+          summary.style.color = '#a7f3d0';
+          summary.textContent = typeof result === 'object' ? JSON.stringify(result, null, 2) : result;
+        } else {
+          status.textContent = `Server Error: ${response.statusText}`;
+          status.style.color = '#f87171';
+          summary.textContent = 'Failed to fetch clean output.';
+        }
+      } catch (err) {
+        status.textContent = `Network Error: ${err.message}`;
+        status.style.color = '#f87171';
+        summary.textContent = 'Error connecting to n8n.';
+      }
+    }
+  </script>
+
+</body>
+</html>
